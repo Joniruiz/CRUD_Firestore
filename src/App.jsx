@@ -5,6 +5,8 @@ function App() {
 
   const [tareas,setTareas] = useState([])
   const [tarea, setTarea]  = useState('')
+  const [modoEdicion, setModoEdicion] = useState(false)
+  const [id,setId] = useState('')
 
 
   useEffect(()=>{
@@ -30,13 +32,50 @@ function App() {
 
   const agregar = async(e) =>{
     e.preventDefault()
-    if(!tarea.trim())
+    if(!tarea.trim()){
     console.log('esta vacio')
     return
-    
+  }
+  try{
+    const db = firebase.firestore()
+    const nuevaTarea = {
+      name: tarea,
+      fecha: Date.now()
+    }
+    const data = await db.collection('tareas').add(nuevaTarea)
+    setTareas([
+      ...tareas,
+      {...nuevaTarea,id: data.id}
+    ])
+    setTarea('')
+  }catch(error){
+    console.log(error)
+
   }
   console.log(tarea)
+  }
 
+  const eliminar = async (id) =>{
+    try{
+      const db = firebase.firestore()
+        await db.collection('tareas').doc(id).delete()
+
+          const arrayFiltrado = tareas.filter(item => item.id !== id)
+          setTareas(arrayFiltrado)
+
+    }catch(error){
+      console.log(error)
+    }
+  }
+  const activarEdicion = (item) =>{
+    setModoEdicion(true)
+    setTarea(item.name)
+    setId(item.id)
+  }
+
+  const editar = async(e) =>{
+    e.preventDefault()
+  }
 
   return (
     <div className="container mt-3">
@@ -47,6 +86,17 @@ function App() {
               tareas.map(item => (
                 <li className='list-group-item' key={item.id}>
                   {item.name}
+                  <button 
+                  id=''
+                    className="btn btn-danger btn-sm float-end ms-3"
+                    onClick={()=> eliminar(item.id)}>
+                    Eliminar
+                  </button>
+                  <button 
+                    className="btn btn-warning btn-sm float-end "
+                    onClick={() => activarEdicion(item)}>
+                    Editar
+                  </button>
                 </li>
               ))
             }
@@ -54,8 +104,12 @@ function App() {
           </ul>
         </div>
         <div className="col-md-6">
-          <h3>Formulario</h3>
-          <form onSubmit={agregar} >
+          <h3>
+            {
+              modoEdicion ? 'Editar Tarea' : 'Agregar Tarea'
+            }
+          </h3>
+          <form onSubmit={modoEdicion ? editar : agregar} >
             <input type="text"
                   placeholder='Ingrese tarea'
                   className='form-control mb-2'
@@ -63,9 +117,13 @@ function App() {
                   value={tarea}
             />
             <button 
-            className="btn btn-dark btn-block"
+            className={
+              modoEdicion ? 'btn btn-warning btn-block' : 'btn btn-dark btn-block'
+            }
             type='submit'>
-              Agregar
+             {
+               modoEdicion? 'Editar' : 'Agregar'
+             }
             </button>
           </form>
         </div>
